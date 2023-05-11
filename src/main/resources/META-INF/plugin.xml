@@ -4,6 +4,7 @@
     <name>Internship Task</name>
     <vendor>innocentuslime</vendor>
 
+    <depends>com.intellij.java</depends>
     <depends>com.intellij.modules.platform</depends>
 
     <resource-bundle>messages.MyBundle</resource-bundle>

@@ -1,15 +1,18 @@
 package com.github.innocentuslime.jbuxintern.toolWindow
 
-import com.intellij.openapi.components.service
+import com.github.innocentuslime.jbuxintern.MyBundle
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
+import com.intellij.psi.JavaRecursiveElementVisitor
+import com.intellij.psi.PsiClass
+import com.intellij.psi.PsiFile
+import com.intellij.psi.PsiManager
+import com.intellij.psi.search.FilenameIndex
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBPanel
 import com.intellij.ui.content.ContentFactory
-import com.github.innocentuslime.jbuxintern.MyBundle
-import com.github.innocentuslime.jbuxintern.services.MyProjectService
 import javax.swing.JButton
 
 
@@ -31,15 +34,33 @@ class MyToolWindowFactory : ToolWindowFactory {
 
     class MyToolWindow(toolWindow: ToolWindow) {
 
-        private val service = toolWindow.project.service<MyProjectService>()
+        private val psiManager = PsiManager.getInstance(toolWindow.project)
+        private val virtFiles = FilenameIndex.getAllFilesByExt(toolWindow.project, "java")
+
+        private fun getPsiFile(): PsiFile? {
+            val virtualFile = virtFiles.first { x -> x != null && x.name.contains("myClass") }
+            return psiManager.findFile(virtualFile)
+        }
 
         fun getContent() = JBPanel<JBPanel<*>>().apply {
-            val label = JBLabel(MyBundle.message("randomLabel", "?"))
+            val label = JBLabel(MyBundle.message("classCount", "?"))
 
             add(label)
-            add(JButton(MyBundle.message("shuffle")).apply {
+            add(JButton(MyBundle.message("countClasses")).apply {
                 addActionListener {
-                    label.text = MyBundle.message("randomLabel", service.getRandomNumber())
+                    var counter = 0
+                    getPsiFile()?.accept(object : JavaRecursiveElementVisitor() {
+                        override fun visitClass(aClass: PsiClass?) {
+                            counter += 1
+                            if (aClass == null) {
+                                return
+                            }
+
+                            aClass.allInnerClasses.forEach { x -> x.accept(this) }
+                            aClass.allMethods.forEach { x -> x.accept(this) }
+                        }
+                    })
+                    label.text = MyBundle.message("classCount", counter)
                 }
             })
         }
