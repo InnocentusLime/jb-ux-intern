@@ -2,6 +2,8 @@ package com.github.innocentuslime.jbuxintern.toolWindow
 
 import com.github.innocentuslime.jbuxintern.MyBundle
 import com.intellij.openapi.diagnostic.thisLogger
+import com.intellij.openapi.fileEditor.FileDocumentManager
+import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
@@ -9,7 +11,6 @@ import com.intellij.psi.JavaRecursiveElementVisitor
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
-import com.intellij.psi.search.FilenameIndex
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBPanel
 import com.intellij.ui.content.ContentFactory
@@ -34,12 +35,17 @@ class MyToolWindowFactory : ToolWindowFactory {
 
     class MyToolWindow(toolWindow: ToolWindow) {
 
+        private val editorManager = FileEditorManager.getInstance(toolWindow.project)
+        private val docManager = FileDocumentManager.getInstance()
         private val psiManager = PsiManager.getInstance(toolWindow.project)
-        private val virtFiles = FilenameIndex.getAllFilesByExt(toolWindow.project, "java")
 
         private fun getPsiFile(): PsiFile? {
-            val virtualFile = virtFiles.first { x -> x != null && x.name.contains("myClass") }
-            return psiManager.findFile(virtualFile)
+            val currentDoc = editorManager.selectedTextEditor?.document
+            val currentFile = if (currentDoc != null) docManager.getFile(currentDoc) else null
+
+            currentFile?.let { return psiManager.findFile(it) }
+
+            return null
         }
 
         fun getContent() = JBPanel<JBPanel<*>>().apply {
