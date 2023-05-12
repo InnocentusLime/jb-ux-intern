@@ -6,15 +6,13 @@ import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
-import com.intellij.psi.JavaRecursiveElementVisitor
-import com.intellij.psi.PsiClass
-import com.intellij.psi.PsiJavaFile
-import com.intellij.psi.PsiManager
+import com.intellij.psi.*
 import com.intellij.psi.search.FileTypeIndex
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBPanel
 import com.intellij.ui.content.ContentFactory
+import com.intellij.util.containers.stream
 import javax.swing.JButton
 
 
@@ -39,11 +37,12 @@ class MyToolWindowFactory : ToolWindowFactory {
         private val psiManager = PsiManager.getInstance(toolWindow.project)
         private val projectScope = GlobalSearchScope.projectScope(toolWindow.project)
 
-        private fun countClasses(cl: PsiClass): Int {
-            var counter = 0
+        private fun countClassesAndFunctions(cl: PsiClass): Pair<Int, Int> {
+            var classCounter = 0
+            var funcCounter = 0
             cl.accept(object : JavaRecursiveElementVisitor() {
                 override fun visitClass(aClass: PsiClass?) {
-                    counter += 1
+                    classCounter += 1
                     if (aClass == null) {
                         return
                     }
@@ -51,13 +50,25 @@ class MyToolWindowFactory : ToolWindowFactory {
                     aClass.allInnerClasses.forEach { x -> x.accept(this) }
                     aClass.allMethods.forEach { x -> x.accept(this) }
                 }
+
+                override fun visitMethod(method: PsiMethod?) {
+                    funcCounter += 1
+                    if (method == null) {
+                        return
+                    }
+
+                    method.body?.accept(this)
+                }
             })
 
-            return counter
+            return Pair(classCounter, funcCounter)
         }
 
-        private fun classesInFile(cls: Array<PsiClass>): Int {
-            return cls.sumOf { x -> countClasses(x) }
+        private fun classesInFile(cls: Array<PsiClass>): Pair<Int, Int> {
+            return cls.stream().map { x -> countClassesAndFunctions(x) }
+                .reduce(Pair(0, 0)) {
+                    (x1, y1), (x2, y2) -> Pair(x1 + x2, y1 + y2)
+                }
         }
 
         fun getContent() = JBPanel<JBPanel<*>>().apply {
@@ -73,7 +84,7 @@ class MyToolWindowFactory : ToolWindowFactory {
                         .map(psiManager::findFile)
                         .filter { it is PsiJavaFile }
                         .map { it as PsiJavaFile }
-                        .forEach { file -> thisLogger().warn("file ${file.name} has ${classesInFile(file.classes)} classes") }
+                        .forEach { file -> thisLogger().warn("file ${file.name} info: ${classesInFile(file.classes)}") }
 
                     //label.text = MyBundle.message("classCount", counter)
                 }
