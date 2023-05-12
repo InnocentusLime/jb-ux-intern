@@ -47,8 +47,8 @@ class MyToolWindowFactory : ToolWindowFactory {
                         return
                     }
 
-                    aClass.allInnerClasses.forEach { x -> x.accept(this) }
-                    aClass.allMethods.forEach { x -> x.accept(this) }
+                    aClass.innerClasses.forEach { x -> x.accept(this) }
+                    aClass.methods.forEach { x -> x.accept(this) }
                 }
 
                 override fun visitMethod(method: PsiMethod?) {
