@@ -1,7 +1,7 @@
 package com.github.innocentuslime.jbuxintern.toolWindow
 
+import com.github.innocentuslime.jbuxintern.MyBundle
 import com.intellij.ide.highlighter.JavaFileType
-import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
@@ -15,12 +15,7 @@ import com.intellij.util.containers.stream
 import javax.swing.tree.DefaultMutableTreeNode
 
 
-class MyToolWindowFactory : ToolWindowFactory {
-
-    init {
-        thisLogger().warn("Don't forget to remove all non-needed sample code files with their corresponding registration entries in `plugin.xml`.")
-    }
-
+class ClassCountWindowFactory : ToolWindowFactory {
     private val contentFactory = ContentFactory.SERVICE.getInstance()
 
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
@@ -71,7 +66,7 @@ class MyToolWindowFactory : ToolWindowFactory {
         }
 
         fun getContent() = JBPanel<JBPanel<*>>().apply {
-            val root = DefaultMutableTreeNode("Class and method count")
+            val root = DefaultMutableTreeNode(MyBundle.message("classAndMethodCountHeading"))
             val tree = Tree(root)
 
             FileTypeIndex.getFiles(
@@ -84,11 +79,9 @@ class MyToolWindowFactory : ToolWindowFactory {
                 .forEach { file ->
                     val fileNode = DefaultMutableTreeNode(file.name)
                     val (classCount, methodCount) = classesAndMethodsInFile(file)
-                    val classNode = DefaultMutableTreeNode("Class count: $classCount")
-                    val methodNode = DefaultMutableTreeNode("Method count: $methodCount")
 
-                    fileNode.add(classNode)
-                    fileNode.add(methodNode)
+                    fileNode.add(DefaultMutableTreeNode(MyBundle.message("classCount", classCount)))
+                    fileNode.add(DefaultMutableTreeNode(MyBundle.message("methodCount", methodCount)))
                     root.add(fileNode)
                 }
 
